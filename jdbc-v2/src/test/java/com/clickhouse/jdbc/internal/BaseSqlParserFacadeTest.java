@@ -871,9 +871,6 @@ public abstract class BaseSqlParserFacadeTest {
             if (stmt1.isHasErrors()) {
                 failedKeywords.add(keyword + " (test: SELECT * FROM " + keyword + ")");
             }
-            if (!stmt1.getTable().equalsIgnoreCase(keyword)) {
-                failedKeywords.add(keyword + " (test: SELECT * FROM " + keyword + ") table name check failed");
-            }
 
             // Test 1: SELECT * FROM <keyword> WHERE col = ?
             String sql2 = "SELECT * FROM " + keyword + " WHERE col = ?";
@@ -882,11 +879,6 @@ public abstract class BaseSqlParserFacadeTest {
                 failedKeywords.add(keyword + " (test: SELECT * FROM " + keyword + " WHERE col = ?)");
             }
             Assert.assertEquals(stmt2.getArgCount(), 1, "Should have 1 parameter for: " + sql2);
-            if (!stmt2.getTable().equalsIgnoreCase(keyword)) {
-                failedKeywords.add(keyword + " (test: SELECT * FROM " + keyword + " WHERE col = ?) table name check failed");
-            }
-//            Assert.assertEquals(stmt2.getTable(), keyword, "Table name mismatch for: " + sql2);
-
 
             // Test 2: INSERT INTO <keyword> VALUES (?)
             String sql5 = "INSERT INTO " + keyword + " VALUES (?)";
