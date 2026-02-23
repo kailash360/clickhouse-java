@@ -548,7 +548,12 @@ void deleteStmt(): {} {
 // https://clickhouse.tech/docs/en/sql-reference/statements/describe-table/
 void describeStmt(): {} {
     (<DESCRIBE> | <DESC>) { token_source.table = "columns"; }
-    (LOOKAHEAD({ getToken(1).kind == TABLE }) <TABLE>)? tableIdentifier(true) (anyExprList())?
+    (LOOKAHEAD({ getToken(1).kind == TABLE }) <TABLE>)?
+    (
+        LOOKAHEAD({ getToken(1).kind == LPAREN }) <LPAREN> anyExprList() <RPAREN>
+        | tableIdentifier(true)
+    )
+    (anyExprList())?
 }
 
 // https://clickhouse.tech/docs/en/sql-reference/statements/detach/
@@ -754,12 +759,12 @@ void columnExprList(): {} {
 
 void withExpr(): {} {
     nestedExpr()
+    (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)*
     (
         (
             LOOKAHEAD({ getToken(1).kind == FLOATING_LITERAL })
             <FLOATING_LITERAL> | <DOT> <DECIMAL_LITERAL>
         )+
-        | (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)+
         | LOOKAHEAD(2) <IS> (<NOT>)? <NULL>
         | LOOKAHEAD(2) (<NOT>)? betweenExpr()
         | LOOKAHEAD(2) (<NOT>)? (<ILIKE> | <LIKE>) nestedExpr()
@@ -776,12 +781,12 @@ void columnsExpr(): {} {
         LOOKAHEAD(2) (<APPLY> | <EXCEPT> | <REPLACE>) <LPAREN> anyExprList() <RPAREN>
     )*
     | nestedExpr()
+    (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)*
     (
         (
             LOOKAHEAD({ getToken(1).kind == FLOATING_LITERAL })
             <FLOATING_LITERAL> | <DOT> <DECIMAL_LITERAL>
         )+
-        | (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)+
         | LOOKAHEAD(2) <IS> (<NOT>)? <NULL>
         | LOOKAHEAD(2) (<NOT>)? betweenExpr()
         | LOOKAHEAD(2) (<NOT>)? (<ILIKE> | <LIKE>) nestedExpr()
@@ -802,11 +807,11 @@ void nestedExpr(): {} {
         (<WHEN> nestedExpr() <THEN> nestedExpr())+ (<ELSE> nestedExpr())? <END>
     | LOOKAHEAD(2) <INTERVAL> (LOOKAHEAD(2) <STRING_LITERAL> | nestedExpr() interval())
     | columnExpr()
+    (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)*
     (
         (
             <FLOATING_LITERAL> | <DOT> <DECIMAL_LITERAL>
         )+
-        | (LOOKAHEAD(2) <LBRACKET> anyExprList() <RBRACKET>)+
         | LOOKAHEAD(2) <IS> (<NOT>)? <NULL>
         | LOOKAHEAD(2) (<NOT>)? betweenExpr()
         | LOOKAHEAD(2) (<NOT>)? (<ILIKE> | <LIKE>) nestedExpr()
