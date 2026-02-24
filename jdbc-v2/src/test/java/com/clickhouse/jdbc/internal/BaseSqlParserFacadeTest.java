@@ -5,6 +5,8 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.Properties;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -14,7 +16,7 @@ public abstract class BaseSqlParserFacadeTest {
     private SqlParserFacade parser;
 
     public BaseSqlParserFacadeTest(String name) throws Exception {
-        parser = SqlParserFacade.getParser(name);
+        parser = SqlParserFacade.getParser(name, new JdbcConfiguration("http://localhost:8123", new Properties()));
     }
 
     @Test

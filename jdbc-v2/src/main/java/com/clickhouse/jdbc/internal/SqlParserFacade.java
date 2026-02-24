@@ -2,6 +2,7 @@ package com.clickhouse.jdbc.internal;
 
 import com.clickhouse.client.api.sql.SQLUtils;
 import com.clickhouse.data.ClickHouseUtils;
+import com.clickhouse.jdbc.DriverProperties;
 import com.clickhouse.jdbc.internal.parser.antlr4.ClickHouseLexer;
 import com.clickhouse.jdbc.internal.parser.antlr4.ClickHouseParser;
 import com.clickhouse.jdbc.internal.parser.antlr4.ClickHouseParserBaseListener;
@@ -37,6 +38,12 @@ public abstract class SqlParserFacade {
 
     private static class JavaCCParser extends SqlParserFacade {
 
+        private final boolean processUseRolesExpr;
+
+        public JavaCCParser(boolean saveRoles) {
+            this.processUseRolesExpr = saveRoles;
+        }
+
         @Override
         public ParsedStatement parsedStatement(String sql) {
             ParsedStatement stmt = new ParsedStatement();
@@ -45,22 +52,24 @@ public abstract class SqlParserFacade {
                 stmt.setUseDatabase(parsedStmt.getDatabase());
             }
 
-            String rolesCount = parsedStmt.getSettings().get("_ROLES_COUNT");
-            if (rolesCount != null) {
-                int rolesCountInt = Integer.parseInt(rolesCount);
-                ArrayList<String> roles = new ArrayList<>(rolesCountInt);
-                boolean resetRoles = false;
-                for (int i = 0; i < rolesCountInt; i++) {
-                    String role = parsedStmt.getSettings().get("_ROLE_" + i);
-                    if (role.equalsIgnoreCase("NONE")) {
-                        resetRoles = true;
+            if (processUseRolesExpr) {
+                String rolesCount = parsedStmt.getSettings().get("_ROLES_COUNT");
+                if (rolesCount != null) {
+                    int rolesCountInt = Integer.parseInt(rolesCount);
+                    ArrayList<String> roles = new ArrayList<>(rolesCountInt);
+                    boolean resetRoles = false;
+                    for (int i = 0; i < rolesCountInt; i++) {
+                        String role = parsedStmt.getSettings().get("_ROLE_" + i);
+                        if (role.equalsIgnoreCase("NONE")) {
+                            resetRoles = true;
+                        }
+                        roles.add(parsedStmt.getSettings().get("_ROLE_" + i));
                     }
-                    roles.add(parsedStmt.getSettings().get("_ROLE_" + i));
+                    if (resetRoles) {
+                        roles.clear();
+                    }
+                    stmt.setRoles(roles);
                 }
-                if (resetRoles) {
-                    roles.clear();
-                }
-                stmt.setRoles(roles);
             }
 
             stmt.setInsert(parsedStmt.getStatementType() == StatementType.INSERT);
@@ -109,6 +118,26 @@ public abstract class SqlParserFacade {
                 }
             }
 
+            if (processUseRolesExpr) {
+                String rolesCount = parsedStmt.getSettings().get("_ROLES_COUNT");
+                if (rolesCount != null) {
+                    int rolesCountInt = Integer.parseInt(rolesCount);
+                    ArrayList<String> roles = new ArrayList<>(rolesCountInt);
+                    boolean resetRoles = false;
+                    for (int i = 0; i < rolesCountInt; i++) {
+                        String role = parsedStmt.getSettings().get("_ROLE_" + i);
+                        if (role.equalsIgnoreCase("NONE")) {
+                            resetRoles = true;
+                        }
+                        roles.add(parsedStmt.getSettings().get("_ROLE_" + i));
+                    }
+                    if (resetRoles) {
+                        roles.clear();
+                    }
+                    stmt.setRoles(roles);
+                }
+            }
+
             stmt.setUseFunction(parsedStmt.isFuncUsed());
             parseParameters(sql, stmt);
             return stmt;
@@ -127,17 +156,23 @@ public abstract class SqlParserFacade {
 
     private static class ANTLR4Parser extends SqlParserFacade {
 
+        protected final boolean processUseRolesExpr;
+
+        public ANTLR4Parser(boolean saveRoles) {
+            this.processUseRolesExpr = saveRoles;
+        }
+
         @Override
         public ParsedStatement parsedStatement(String sql) {
             ParsedStatement stmt = new ParsedStatement();
-            parseSQL(sql, new ParsedStatementListener(stmt));
+            parseSQL(sql, new ParsedStatementListener(stmt, processUseRolesExpr));
             return stmt;
         }
 
         @Override
         public ParsedPreparedStatement parsePreparedStatement(String sql) {
             ParsedPreparedStatement stmt = new ParsedPreparedStatement();
-            parseSQL(sql, new ParsedPreparedStatementListener(stmt));
+            parseSQL(sql, new ParsedPreparedStatementListener(stmt, processUseRolesExpr));
             
             // Combine database and table like JavaCC does
             String tableName = stmt.getTable();
@@ -177,12 +212,27 @@ public abstract class SqlParserFacade {
                     qCtx.existsStmt() != null || qCtx.checkStmt() != null);
         }
 
+        static List<String> processRolesExpr(ClickHouseParser.SetRoleStmtContext ctx) {
+            if (ctx.NONE() != null) {
+                return Collections.emptyList();
+            } else {
+                List<String> roles = new ArrayList<>();
+                for (ClickHouseParser.IdentifierContext id : ctx.setRolesList().identifier()) {
+                    roles.add(SQLUtils.unquoteIdentifier(id.getText()));
+                }
+                return roles;
+            }
+        }
+
         private static class ParsedStatementListener extends ClickHouseParserBaseListener {
 
             private final ParsedStatement parsedStatement;
 
-            public ParsedStatementListener(ParsedStatement parsedStatement) {
+            private final boolean processSetRolesExpr;
+
+            public ParsedStatementListener(ParsedStatement parsedStatement, boolean processSetRolesExpr) {
                 this.parsedStatement = parsedStatement;
+                this.processSetRolesExpr = processSetRolesExpr;
             }
 
             @Override
@@ -206,14 +256,8 @@ public abstract class SqlParserFacade {
 
             @Override
             public void enterSetRoleStmt(ClickHouseParser.SetRoleStmtContext ctx) {
-                if (ctx.NONE() != null) {
-                    parsedStatement.setRoles(Collections.emptyList());
-                } else {
-                    List<String> roles = new ArrayList<>();
-                    for (ClickHouseParser.IdentifierContext id : ctx.setRolesList().identifier()) {
-                        roles.add(SQLUtils.unquoteIdentifier(id.getText()));
-                    }
-                    parsedStatement.setRoles(roles);
+                if (processSetRolesExpr) {
+                    parsedStatement.setRoles(processRolesExpr(ctx));
                 }
             }
         }
@@ -222,8 +266,11 @@ public abstract class SqlParserFacade {
 
             protected final ParsedPreparedStatement parsedStatement;
 
-            public ParsedPreparedStatementListener(ParsedPreparedStatement parsedStatement) {
+            private final boolean processSetRolesExpr;
+
+            public ParsedPreparedStatementListener(ParsedPreparedStatement parsedStatement, boolean processSetRolesExpr) {
                 this.parsedStatement = parsedStatement;
+                this.processSetRolesExpr = processSetRolesExpr;
             }
 
             @Override
@@ -242,14 +289,8 @@ public abstract class SqlParserFacade {
 
             @Override
             public void enterSetRoleStmt(ClickHouseParser.SetRoleStmtContext ctx) {
-                if (ctx.NONE() != null) {
-                    parsedStatement.setRoles(Collections.emptyList());
-                } else {
-                    List<String> roles = new ArrayList<>();
-                    for (ClickHouseParser.IdentifierContext id : ctx.setRolesList().identifier()) {
-                        roles.add(SQLUtils.unquoteIdentifier(id.getText()));
-                    }
-                    parsedStatement.setRoles(roles);
+                if (processSetRolesExpr) {
+                    parsedStatement.setRoles(processRolesExpr(ctx));
                 }
             }
 
@@ -349,10 +390,15 @@ public abstract class SqlParserFacade {
 
     private static class ANTLR4AndParamsParser extends ANTLR4Parser {
 
+
+        public ANTLR4AndParamsParser(boolean saveRoles) {
+            super(saveRoles);
+        }
+
         @Override
         public ParsedPreparedStatement parsePreparedStatement(String sql) {
             ParsedPreparedStatement stmt = new ParsedPreparedStatement();
-            parseSQL(sql, new ParseStatementAndParamsListener(stmt));
+            parseSQL(sql, new ParseStatementAndParamsListener(stmt, processUseRolesExpr));
             
             // Combine database and table like JavaCC does
             String tableName = stmt.getTable();
@@ -366,8 +412,8 @@ public abstract class SqlParserFacade {
 
         private static class ParseStatementAndParamsListener extends ParsedPreparedStatementListener {
 
-            public ParseStatementAndParamsListener(ParsedPreparedStatement parsedStatement) {
-                super(parsedStatement);
+            public ParseStatementAndParamsListener(ParsedPreparedStatement parsedStatement, boolean processSetRolesExpr) {
+                super(parsedStatement, processSetRolesExpr);
             }
 
             @Override
@@ -449,16 +495,18 @@ public abstract class SqlParserFacade {
         ANTLR4
     }
 
-    public static SqlParserFacade getParser(String name) throws SQLException {
+    public static SqlParserFacade getParser(String name, JdbcConfiguration jdbcConfiguration) throws SQLException {
         try {
+            boolean saveRoles = Boolean.parseBoolean(jdbcConfiguration.getDriverProperty(DriverProperties.REMEMBER_LAST_SET_ROLES.getKey(),
+                    DriverProperties.REMEMBER_LAST_SET_ROLES.getDefaultValue()));
             SQLParser parserSelection = SQLParser.valueOf(name);
             switch (parserSelection) {
                 case JAVACC:
-                    return new JavaCCParser();
+                    return new JavaCCParser(saveRoles);
                 case ANTLR4_PARAMS_PARSER:
-                    return new ANTLR4AndParamsParser();
+                    return new ANTLR4AndParamsParser(saveRoles);
                 case ANTLR4:
-                    return new ANTLR4Parser();
+                    return new ANTLR4Parser(saveRoles);
             }
             throw new SQLException("Unsupported parser: " + parserSelection);
         } catch (IllegalArgumentException e) {

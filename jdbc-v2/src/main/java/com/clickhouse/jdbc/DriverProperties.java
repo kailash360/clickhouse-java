@@ -78,6 +78,39 @@ public enum DriverProperties {
      */
     QUERY_ID_GENERATOR("jdbc_query_id_generator", null),
 
+    /**
+     * Controls logic of saving roles that were set using {@code SET <role>} statement.
+     * Default: true - save roles
+     */
+    REMEMBER_LAST_SET_ROLES("remember_last_set_roles", String.valueOf(Boolean.TRUE)),
+
+    /**
+     * List of custom http params. Deprecated and will be removed.
+     * Use {@link ClientConfigProperties#serverSetting(String)} for passing server settings or
+     * use {@link ClientConfigProperties#httpHeader(String)} to pass custom http headers.
+     * See also {@link ClientConfigProperties#CUSTOM_SETTINGS_PREFIX}: custom parameters can be passed
+     * with {@code custom_} prefix and will be sent as is. Make prefix matches server config.
+     *
+     */
+    @Deprecated
+    CUSTOM_HTTP_PARAMS("custom_http_params", null),
+
+    /**
+     * Deprecated as driver do not convert Date values to any timezone. Dates are sent as is.
+     * Problem having this setting on connection level is that affects all child statements and
+     * there is no way to control on column basis.
+     * Driver ignores this setting but will throw exception when it is completely removed.
+     */
+    @Deprecated
+    USE_TZ_FOR_DATES("use_server_time_zone_for_dates", String.valueOf(Boolean.FALSE)),
+
+    /**
+     * Current driver implementation uses only one http provider. So setting it has no effect.
+     * Deprecated will be removed soon
+     */
+    @Deprecated
+    HTTP_CONNECTION_PROVIDER("http_connection_provider", null),
+
     ;
 
 
