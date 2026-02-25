@@ -8,7 +8,6 @@ import com.clickhouse.client.ClickHouseProtocol;
 import com.clickhouse.client.ClickHouseServerForTest;
 import com.clickhouse.client.api.Client;
 import com.clickhouse.client.api.ClientException;
-import com.clickhouse.client.api.DataTypeUtils;
 import com.clickhouse.client.api.ServerException;
 import com.clickhouse.client.api.command.CommandSettings;
 import com.clickhouse.client.api.data_formats.ClickHouseBinaryFormatReader;
@@ -59,10 +58,10 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -693,6 +692,41 @@ public class QueryTests extends BaseIntegrationTest {
 
             Assert.assertEquals(expectedNumber, 3);
         }
+    }
+
+    @Test(groups = {"integration"})
+    public void testSimpleResultSetReadWithBinaryReader() throws Exception {
+        QuerySettings settings = new QuerySettings().setFormat(ClickHouseFormat.RowBinaryWithNamesAndTypes);
+
+        try (QueryResponse response = client.query("SELECT 1 a, null::Nullable(Int32) b", settings).get(3, TimeUnit.SECONDS)) {
+            ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
+
+            Assert.assertTrue(reader.hasNext());
+            reader.next();
+            Assert.assertEquals(reader.getInteger(1), 1);
+
+            Assert.assertTrue(reader.hasValue(1));
+            Assert.assertFalse(reader.hasValue(2));
+            Assert.assertFalse(reader.hasValue(3));
+
+            Assert.assertTrue(reader.hasValue("a"));
+            Assert.assertFalse(reader.hasValue("b"));
+            Assert.assertFalse(reader.hasValue("c"));
+        }
+
+        List<GenericRecord> records = client.queryAll("SELECT 1 a, null::Nullable(Int32) b", settings);
+
+        GenericRecord record = records.get(0);
+
+        Assert.assertEquals(record.getInteger(1), 1);
+
+        Assert.assertTrue(record.hasValue(1));
+        Assert.assertFalse(record.hasValue(2));
+        Assert.assertFalse(record.hasValue(3));
+
+        Assert.assertTrue(record.hasValue("a"));
+        Assert.assertFalse(record.hasValue("b"));
+        Assert.assertFalse(record.hasValue("c"));
     }
 
     private final static List<String> NULL_DATASET_COLUMNS = Arrays.asList(
@@ -2149,6 +2183,26 @@ public class QueryTests extends BaseIntegrationTest {
             Assert.assertEquals(record.getString("test_duplicate_column_names2.name"), "another name");
             Assert.assertEquals(record.getString(1), "some name");
             Assert.assertEquals(record.getString(2), "another name");
+        }
+    }
+
+    @Test(groups = {"integration"})
+    public void testMaxExecutionTime() throws Exception {
+        try (Client localClient = newClient()
+                .setSocketTimeout(10, ChronoUnit.SECONDS)
+                .build()) {
+
+            QuerySettings settings = new QuerySettings().setMaxExecutionTime(1);
+
+            localClient.query("SELECT sleep(2)", settings).get(10, TimeUnit.SECONDS);
+            Assert.fail("Expected ServerException due to max_execution_time");
+        } catch (ServerException e) {
+            Assert.assertEquals(e.getCode(), 159, "Expected TIMEOUT_EXCEEDED error code");
+        } catch (ExecutionException e) {
+            Assert.assertTrue(e.getCause() instanceof ServerException,
+                    "Expected cause to be ServerException but was: " + e.getCause().getClass().getName());
+            ServerException se = (ServerException) e.getCause();
+            Assert.assertEquals(se.getCode(), 159, "Expected TIMEOUT_EXCEEDED error code");
         }
     }
 }
