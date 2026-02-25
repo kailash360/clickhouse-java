@@ -5,6 +5,8 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.clickhouse.jdbc.internal.parser.javacc.ClickHouseSqlUtils;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,6 +17,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -108,6 +112,37 @@ public class StatementSQLTest extends BaseSQLTests {
         // If you want to assert something specific, add it here
         Assert.assertTrue(allowedKeywords.size() + disallowedKeywords.size() == keywords.size(),
                 "All keywords should be categorized");
+    }
+
+    @Test(groups = {"integration"})
+    public void testAllowedKeywordAliasesMatchSystemKeywords() throws Exception {
+        Set<String> reservedKeywords = new TreeSet<>(loadKeywordsFromResource("reserved_keywords.txt"));
+
+        Set<String> systemKeywords = new TreeSet<>();
+        try (Connection connection = getJdbcConnection();
+             Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT keyword FROM system.keywords")) {
+            while (rs.next()) {
+                for (String word : rs.getString(1).toUpperCase().split("\\s+")) {
+                    systemKeywords.add(word);
+                }
+            }
+        }
+
+        Assert.assertFalse(systemKeywords.isEmpty(), "system.keywords should not be empty");
+
+        Set<String> nonReservedSystemKeywords = new TreeSet<>(systemKeywords);
+        nonReservedSystemKeywords.removeAll(reservedKeywords);
+
+        Set<String> allowedAliases = ClickHouseSqlUtils.getKeywordGroup(
+                ClickHouseSqlUtils.KEYWORD_GROUP_ALLOWED_ALIASES);
+
+        Set<String> missingFromAllowed = new TreeSet<>(nonReservedSystemKeywords);
+        missingFromAllowed.removeAll(allowedAliases);
+
+        Assert.assertTrue(missingFromAllowed.isEmpty(),
+                "New keywords found in system.keywords (non-reserved) that must be added to "
+                        + "ALLOWED_KEYWORD_ALIASES or reserved_keywords.txt: " + missingFromAllowed);
     }
 
     private List<String> loadKeywordsFromResource(String resourceName) throws Exception {
