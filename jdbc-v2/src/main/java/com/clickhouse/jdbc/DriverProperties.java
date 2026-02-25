@@ -85,15 +85,28 @@ public enum DriverProperties {
     REMEMBER_LAST_SET_ROLES("remember_last_set_roles", String.valueOf(Boolean.TRUE)),
 
     /**
-     * List of custom http params. Deprecated and will be removed.
-     * Use {@link ClientConfigProperties#serverSetting(String)} for passing server settings or
-     * use {@link ClientConfigProperties#httpHeader(String)} to pass custom http headers.
-     * See also {@link ClientConfigProperties#CUSTOM_SETTINGS_PREFIX}: custom parameters can be passed
-     * with {@code custom_} prefix and will be sent as is. Make prefix matches server config.
+     * Deprecated and will be removed.
+     * This property is here to keep backward compatibility with {@code com.clickhouse.client.http.config.ClickHouseHttpOption#CUSTOM_PARAMS}.
+     * Original property is deprecated for {@code com.clickhouse.client.config.ClickHouseClientOption#CUSTOM_SETTINGS}
+     * This property is expected to be a comma separated list of key-value pair that should be sent to server.
+     * Pairs will be converted to new properties for client config.
+     * Use {@link ClientConfigProperties#serverSetting(String)} instead
      *
      */
     @Deprecated
     CUSTOM_HTTP_PARAMS("custom_http_params", null),
+
+
+    /**
+     * Deprecated and will be removed.
+     * This property is here to keep backward compatibility with {@code com.clickhouse.client.config.ClickHouseClientOption#CUSTOM_SETTINGS}.
+     * This property is expected to be a comma separated list of key-value pair that should be sent to server.
+     * Pairs will be converted to new properties for client config.
+     * Use {@link ClientConfigProperties#serverSetting(String)} instead
+     *
+     */
+    @Deprecated
+    CUSTOM_SETTINGS("custom_settings", null),
 
     /**
      * Deprecated as driver do not convert Date values to any timezone. Dates are sent as is.
@@ -102,7 +115,7 @@ public enum DriverProperties {
      * Driver ignores this setting but will throw exception when it is completely removed.
      */
     @Deprecated
-    USE_TZ_FOR_DATES("use_server_time_zone_for_dates", String.valueOf(Boolean.FALSE)),
+    USE_TZ_FOR_DATES("use_server_time_zone_for_dates", null),
 
     /**
      * Current driver implementation uses only one http provider. So setting it has no effect.
