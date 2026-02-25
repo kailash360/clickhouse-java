@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static org.testng.Assert.assertEquals;
@@ -23,7 +24,7 @@ public abstract class BaseSqlParserFacadeTest {
     private SqlParserFacade parser;
 
     public BaseSqlParserFacadeTest(String name) throws Exception {
-        parser = SqlParserFacade.getParser(name);
+        parser = SqlParserFacade.getParser(name, new JdbcConfiguration("jdbc:ch:http://localhost:8123", new Properties()));
     }
 
     @Test
