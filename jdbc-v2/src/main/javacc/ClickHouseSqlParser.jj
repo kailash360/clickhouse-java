@@ -587,8 +587,13 @@ void grantStmt(): {} { // not interested
 void insertStmt(): {} {
     <INSERT> <INTO>
     (
-        LOOKAHEAD({ getToken(1).kind == FUNCTION }) <FUNCTION> functionExpr() 
-        | (LOOKAHEAD(2) <TABLE>)? tableIdentifier(true)
+        LOOKAHEAD({ getToken(1).kind == FUNCTION
+            && !tokenIn(2, VALUES, FORMAT, SETTINGS, SELECT, WITH, INFILE)
+            && getToken(3).kind == LPAREN }) <FUNCTION> functionExpr()
+        | (
+            LOOKAHEAD({ getToken(1).kind == TABLE
+                && !tokenIn(2, VALUES, FORMAT, SETTINGS, SELECT, WITH, LPAREN) }) <TABLE>
+        )? tableIdentifier(true)
     )
     (
         LOOKAHEAD(2) infilePart()
