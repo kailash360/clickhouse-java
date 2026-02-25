@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class SqlParserFacade {
@@ -53,21 +54,8 @@ public abstract class SqlParserFacade {
             }
 
             if (processUseRolesExpr) {
-                String rolesCount = parsedStmt.getSettings().get("_ROLES_COUNT");
-                if (rolesCount != null) {
-                    int rolesCountInt = Integer.parseInt(rolesCount);
-                    ArrayList<String> roles = new ArrayList<>(rolesCountInt);
-                    boolean resetRoles = false;
-                    for (int i = 0; i < rolesCountInt; i++) {
-                        String role = parsedStmt.getSettings().get("_ROLE_" + i);
-                        if (role.equalsIgnoreCase("NONE")) {
-                            resetRoles = true;
-                        }
-                        roles.add(parsedStmt.getSettings().get("_ROLE_" + i));
-                    }
-                    if (resetRoles) {
-                        roles.clear();
-                    }
+                List<String> roles = processRoles(parsedStmt.getSettings());
+                if (roles != null) {
                     stmt.setRoles(roles);
                 }
             }
@@ -119,21 +107,8 @@ public abstract class SqlParserFacade {
             }
 
             if (processUseRolesExpr) {
-                String rolesCount = parsedStmt.getSettings().get("_ROLES_COUNT");
-                if (rolesCount != null) {
-                    int rolesCountInt = Integer.parseInt(rolesCount);
-                    ArrayList<String> roles = new ArrayList<>(rolesCountInt);
-                    boolean resetRoles = false;
-                    for (int i = 0; i < rolesCountInt; i++) {
-                        String role = parsedStmt.getSettings().get("_ROLE_" + i);
-                        if (role.equalsIgnoreCase("NONE")) {
-                            resetRoles = true;
-                        }
-                        roles.add(parsedStmt.getSettings().get("_ROLE_" + i));
-                    }
-                    if (resetRoles) {
-                        roles.clear();
-                    }
+                List<String> roles = processRoles(parsedStmt.getSettings());
+                if (roles != null) {
                     stmt.setRoles(roles);
                 }
             }
@@ -141,6 +116,27 @@ public abstract class SqlParserFacade {
             stmt.setUseFunction(parsedStmt.isFuncUsed());
             parseParameters(sql, stmt);
             return stmt;
+        }
+
+        private List<String> processRoles(Map<String, String> settings) {
+            String rolesCount = settings.get("_ROLES_COUNT");
+            if (rolesCount != null) {
+                int rolesCountInt = Integer.parseInt(rolesCount);
+                ArrayList<String> roles = new ArrayList<>(rolesCountInt);
+                boolean resetRoles = false;
+                for (int i = 0; i < rolesCountInt; i++) {
+                    String role = settings.get("_ROLE_" + i);
+                    if (role.equalsIgnoreCase("NONE")) {
+                        resetRoles = true;
+                    }
+                    roles.add(settings.get("_ROLE_" + i));
+                }
+                if (resetRoles) {
+                    roles.clear();
+                }
+                return roles;
+            }
+            return null; // no roles present
         }
 
 

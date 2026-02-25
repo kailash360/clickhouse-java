@@ -418,7 +418,7 @@ public class StatementTest extends JdbcIntegrationTest {
         final String userPass = "^1A" + RandomStringUtils.random(12, true, true) + "3B$";
         Properties properties = new Properties();
         properties.setProperty(DriverProperties.SQL_PARSER.getKey(), parser.name());
-        try (ConnectionImpl conn = (ConnectionImpl) getJdbcConnection()) {
+        try (ConnectionImpl conn = (ConnectionImpl) getJdbcConnection(properties)) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("DROP ROLE IF EXISTS " + String.join(", ", roles));
                 stmt.execute("DROP USER IF EXISTS some_user");
@@ -432,6 +432,7 @@ public class StatementTest extends JdbcIntegrationTest {
         Properties info = new Properties();
         info.setProperty("user", "some_user");
         info.setProperty("password", userPass);
+        info.setProperty(DriverProperties.SQL_PARSER.getKey(), parser.name());
         try (ConnectionImpl conn = new ConnectionImpl(getEndpointString(), info)) {
             GenericRecord dataRecord = conn.getClient().queryAll("SELECT currentRoles()").get(0);
             assertEquals(dataRecord.getList(1).size(), 0);
@@ -484,6 +485,7 @@ public class StatementTest extends JdbcIntegrationTest {
         disableSavingRoles.setProperty("user", "some_user");
         disableSavingRoles.setProperty("password", userPass);
         disableSavingRoles.setProperty(DriverProperties.REMEMBER_LAST_SET_ROLES.getKey(), "false");
+        disableSavingRoles.setProperty(DriverProperties.SQL_PARSER.getKey(), parser.name());
         try (ConnectionImpl conn = new ConnectionImpl(getEndpointString(), disableSavingRoles)) {
             GenericRecord dataRecord = conn.getClient().queryAll("SELECT currentRoles()").get(0);
             assertEquals(dataRecord.getList(1).size(), 0);
