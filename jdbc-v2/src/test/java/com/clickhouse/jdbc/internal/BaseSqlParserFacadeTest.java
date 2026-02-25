@@ -16,7 +16,7 @@ public abstract class BaseSqlParserFacadeTest {
     private SqlParserFacade parser;
 
     public BaseSqlParserFacadeTest(String name) throws Exception {
-        parser = SqlParserFacade.getParser(name, new JdbcConfiguration("http://localhost:8123", new Properties()));
+        parser = SqlParserFacade.getParser(name, new JdbcConfiguration("jdbc:ch:http://localhost:8123", new Properties()));
     }
 
     @Test
