@@ -577,11 +577,7 @@ public abstract class AbstractBinaryFormatReader implements ClickHouseBinaryForm
 
     @Override
     public boolean hasValue(String colName) {
-        try {
-            return hasValue(schema.nameToColumnIndex(colName));
-        } catch (NoSuchColumnException e) {
-            return false;
-        }
+        return hasValue(schema.findColumnIndex(colName));
     }
 
     @Override

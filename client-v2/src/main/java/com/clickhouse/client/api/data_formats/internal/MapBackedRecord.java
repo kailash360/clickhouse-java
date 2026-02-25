@@ -12,6 +12,7 @@ import com.clickhouse.data.value.ClickHouseGeoMultiPolygonValue;
 import com.clickhouse.data.value.ClickHouseGeoPointValue;
 import com.clickhouse.data.value.ClickHouseGeoPolygonValue;
 import com.clickhouse.data.value.ClickHouseGeoRingValue;
+import com.google.common.collect.ImmutableList;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -311,11 +312,8 @@ public class MapBackedRecord implements GenericRecord {
 
     @Override
     public boolean hasValue(int colIndex) {
-        try {
-            return hasValue(schema.columnIndexToName(colIndex));
-        } catch (NoSuchColumnException e) {
-            return false;
-        }
+        String columnName = schema.findColumnName(colIndex);
+        return columnName != null && hasValue(columnName);
     }
 
     @Override
