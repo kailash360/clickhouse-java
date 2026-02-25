@@ -2,6 +2,7 @@ package com.clickhouse.client.api.data_formats.internal;
 
 import com.clickhouse.client.api.ClientException;
 import com.clickhouse.client.api.internal.DataTypeConverter;
+import com.clickhouse.client.api.metadata.NoSuchColumnException;
 import com.clickhouse.client.api.metadata.TableSchema;
 import com.clickhouse.client.api.query.GenericRecord;
 import com.clickhouse.client.api.query.NullValueException;
@@ -310,7 +311,11 @@ public class MapBackedRecord implements GenericRecord {
 
     @Override
     public boolean hasValue(int colIndex) {
-        return hasValue(schema.columnIndexToName(colIndex));
+        try {
+            return hasValue(schema.columnIndexToName(colIndex));
+        } catch (NoSuchColumnException e) {
+            return false;
+        }
     }
 
     @Override
