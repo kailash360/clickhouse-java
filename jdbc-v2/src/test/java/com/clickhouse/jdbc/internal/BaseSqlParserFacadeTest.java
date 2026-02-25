@@ -1,6 +1,7 @@
 package com.clickhouse.jdbc.internal;
 
 
+import com.clickhouse.jdbc.internal.parser.javacc.ClickHouseSqlUtils;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -804,10 +805,6 @@ public abstract class BaseSqlParserFacadeTest {
         List<String> keywords = new ArrayList<>();
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName);
              BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            
-            if (is == null) {
-                return keywords;
-            }
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -826,7 +823,8 @@ public abstract class BaseSqlParserFacadeTest {
      */
     @Test
     public void testKeywordAliasesAsTableNames() throws Exception {
-        List<String> keywords = loadKeywords("allowed_keyword_aliases.txt");
+        List<String> keywords = new ArrayList<>(
+                ClickHouseSqlUtils.getKeywordGroup(ClickHouseSqlUtils.KEYWORD_GROUP_ALLOWED_ALIASES));
         Assert.assertFalse(keywords.isEmpty(), "Keywords list should not be empty");
 
         List<String> failedKeywords = new ArrayList<>();
@@ -890,7 +888,7 @@ public abstract class BaseSqlParserFacadeTest {
                 failedKeywords.add(keyword + " (test: INSERT INTO " + keyword + " VALUES (?))");
             }
             Assert.assertEquals(stmt5.getArgCount(), 1, "Should have 1 parameter for: " + sql5);
-            if (!stmt2.getTable().equalsIgnoreCase(keyword)) {
+            if (!stmt5.getTable().equalsIgnoreCase(keyword)) {
                 failedKeywords.add(keyword + " (test: INSERT INTO " + keyword + " VALUES (?)) table name check failed");
             }
         }
