@@ -668,7 +668,7 @@ setStmt
 // SET ROLE statement
 
 setRoleStmt
-    : SET (DEFAULT)? ROLE (setRolesList | NONE | ALL (EXCEPT setRolesList)) (TO identifier | CURRENT_USER (COMMA identifier | CURRENT_USER)*)?
+    : SET (DEFAULT)? ROLE ( NONE | setRolesList | ALL (EXCEPT setRolesList)) (TO identifier | CURRENT_USER (COMMA identifier | CURRENT_USER)*)?
     ;
 
 setRolesList
