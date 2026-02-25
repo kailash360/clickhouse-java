@@ -1,19 +1,16 @@
 package com.clickhouse.jdbc.internal.parser.javacc;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 public final class ClickHouseSqlUtils {
     public static final String KEYWORD_GROUP_ALLOWED_ALIASES = "allowed_keyword_aliases";
 
-    private static final Map<String, Set<String>> KEYWORD_GROUPS = initKeywordGroups();
+    private static final Set<String> ALLOWED_KEYWORD_ALIASES = initAllowedKeywordAliases();
 
-    private static Map<String, Set<String>> initKeywordGroups() {
-        Map<String, Set<String>> groups = new LinkedHashMap<>();
-        groups.put(KEYWORD_GROUP_ALLOWED_ALIASES, buildKeywordSet(
+    private static Set<String> initAllowedKeywordAliases() {
+        return buildKeywordSet(
                 "ACCESS", "ACTION", "ADD", "ADMIN", "AFTER", "ALGORITHM", "ALIAS", "ALLOWED_LATENESS", "ALTER",
                 "AND", "APPEND", "APPLY", "ASC", "ASCENDING", "ASSUME", "AST", "ASYNC", "ATTACH",
                 "AUTHENTICATION", "AUTO_INCREMENT", "AZURE", "BACKUP", "BCRYPT_HASH", "BCRYPT_PASSWORD", "BEGIN",
@@ -59,8 +56,7 @@ public final class ClickHouseSqlUtils {
                 "TRUE", "TRUNCATE", "TTL", "TYPE", "TYPEOF", "UNBOUNDED", "UNDROP", "UNFREEZE", "UNIQUE", "UNLOCK",
                 "UNSET", "UNSIGNED", "UNTIL", "UPDATE", "URL", "USE", "USER", "VALID", "VALUES", "VARYING", "VIEW",
                 "VISIBLE", "VOLUME", "WATCH", "WATERMARK", "WEEK", "WEEKS", "WHEN", "WITH_ITEMINDEX", "WORKER",
-                "WORKLOAD", "WRITABLE", "WRITE", "YEAR", "YEARS", "ZKPATH"));
-        return Collections.unmodifiableMap(groups);
+                "WORKLOAD", "WRITABLE", "WRITE", "YEAR", "YEARS", "ZKPATH");
     }
 
     private static Set<String> buildKeywordSet(String... values) {
@@ -72,8 +68,7 @@ public final class ClickHouseSqlUtils {
     }
 
     public static Set<String> getKeywordGroup(String groupName) {
-        Set<String> keywords = KEYWORD_GROUPS.get(groupName);
-        return keywords != null ? keywords : Collections.emptySet();
+        return KEYWORD_GROUP_ALLOWED_ALIASES.equals(groupName) ? ALLOWED_KEYWORD_ALIASES : Collections.emptySet();
     }
 
     public static boolean isQuote(char ch) {
